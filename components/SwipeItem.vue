@@ -2,6 +2,7 @@
   <div
     class="relative overflow-hidden transition-all duration-500 h-12"
     :class="[isSwiping ? 'select-none' : '', fullSwipeChoice && 'h-0 ']"
+    @touchstart="processTouchStart"
     @touchend="processTouchEnd"
   >
     <div
@@ -42,7 +43,7 @@
     >
       <div class="px-4">
         <slot></slot>
-        <span>{{ confirmChoice }} :: {{ fullSwipeChoice }} </span>
+        <span>{{ direction }} :: {{ initIsSwiping }} </span>
       </div>
     </div>
   </div>
@@ -64,19 +65,29 @@ export default defineComponent({
 
     const { width: viewportWidth } = useWindowSize()
     const { direction, lengthX, isSwiping } = useSwipe(el, {
-      threshold: viewportWidth.value / 2,
+      threshold: 1,
       onSwipeStart(e) {
         confirmChoice.value = false
       },
       onSwipeEnd(e) {
-        fullSwipeChoice.value = true
+        // fullSwipeChoice.value = true
       },
     })
 
     watch(lengthX, (n, o) => {
-      const sign = Math.sign(n)
-      initDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : null
-      widthCalc.value = Math.abs(lengthX.value)
+      if (
+        initIsSwiping.value === true ||
+        direction.value === 'LEFT' ||
+        direction.value === 'RIGHT'
+      ) {
+        initIsSwiping.value = true
+        const sign = Math.sign(n)
+        initDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : null
+        widthCalc.value = Math.abs(lengthX.value)
+        if (Math.abs(lengthX.value) >= viewportWidth.value / 2) {
+          processChoice()
+        }
+      }
     })
 
     // watch(isSwiping, (n, o) => {
@@ -91,18 +102,40 @@ export default defineComponent({
       }
     })
 
-    watch(widthCalc, (n, o) => {
-      if (n !== buttonWidth && !confirmChoice.value) {
-        initIsSwiping.value = true
+    watch(initIsSwiping, (n, o) => {
+      if (n === true) {
+        const scrollBarGap =
+          window.innerWidth - document.documentElement.clientWidth
+        document.body.style.overflow = 'hidden'
+        document.body.style.paddingRight = `${scrollBarGap}px`
       }
     })
 
+    // watch(widthCalc, (n, o) => {
+    //   if (n !== buttonWidth && !confirmChoice.value) {
+    //     initIsSwiping.value = true
+    //   }
+    // })
+
     function processTouchEnd() {
+      console.log('processTouchEnd')
       initIsSwiping.value = false
       if (!fullSwipeChoice.value && widthCalc.value) {
         confirmChoice.value = true
         widthCalc.value = buttonWidth
       }
+      document.body.style.overflow = null
+      document.body.style.paddingRight = null
+    }
+
+    function processTouchStart() {
+      // setTimeout(() => {
+      //   console.log('processTouchStart', widthCalc.value)
+      // }, 500)
+      // const scrollBarGap =
+      //   window.innerWidth - document.documentElement.clientWidth
+      // document.body.style.overflow = 'hidden'
+      // document.body.style.paddingRight = `${scrollBarGap}px`
     }
 
     function processChoice() {
@@ -121,6 +154,7 @@ export default defineComponent({
       fullSwipeChoice,
       confirmChoice,
       processTouchEnd,
+      processTouchStart,
       widthCalc,
       processChoice,
     }
