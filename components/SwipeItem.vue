@@ -1,21 +1,39 @@
 <template>
   <div
     class="relative overflow-hidden transition-all duration-500 h-12"
-    :class="[isSwiping ? 'select-none' : '', fullSwipeChoice && 'h-0 ']"
+    :class="[isSwiping ? 'select-none' : '', closeItem && 'h-0 ']"
     @touchstart="processTouchStart"
     @touchend="processTouchEnd"
   >
     <div
       class="absolute top-0 left-0 w-full h-full bg-green-500"
-      :class="[initDirection === 'RIGHT' ? 'z-0' : '-z-1']"
+      :class="[
+        initDirection === 'RIGHT' ? 'z-0' : '-z-1',
+        fullSwipeChoice && 'text-white',
+      ]"
     >
-      <button class="h-12 w-12 select-none" @click="processChoice">✓</button>
+      <button
+        ref="left-button"
+        class="h-12 w-12 select-none"
+        @click="processChoice"
+      >
+        ✓
+      </button>
     </div>
     <div
       class="absolute top-0 left-0 w-full h-full bg-red-500 flex justify-end"
-      :class="[initDirection === 'LEFT' ? 'z-0' : '-z-1']"
+      :class="[
+        initDirection === 'LEFT' ? 'z-0' : '-z-1',
+        fullSwipeChoice && 'text-white',
+      ]"
     >
-      <button class="h-12 w-12 select-none" @click="processChoice">✘</button>
+      <button
+        ref="right-button"
+        class="h-12 w-12 select-none"
+        @click="processChoice"
+      >
+        ✘
+      </button>
     </div>
     <div
       ref="el"
@@ -59,6 +77,7 @@ export default defineComponent({
     const initDirection = ref(null)
     const initIsSwiping = ref(false)
     const fullSwipeChoice = ref(false)
+    const closeItem = ref(false)
     const confirmChoice = ref(false)
     const widthCalc = ref(0)
     const buttonWidth = 48
@@ -70,6 +89,13 @@ export default defineComponent({
         confirmChoice.value = false
       },
       onSwipeEnd(e) {
+        if (fullSwipeChoice.value === true) {
+          processChoice()
+        } else if (initDirection.value === 'LEFT') {
+          context.refs['right-button'].focus()
+        } else if (initDirection.value === 'RIGHT') {
+          context.refs['left-button'].focus()
+        }
         // fullSwipeChoice.value = true
       },
     })
@@ -85,7 +111,10 @@ export default defineComponent({
         initDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : null
         widthCalc.value = Math.abs(lengthX.value)
         if (Math.abs(lengthX.value) >= viewportWidth.value / 2) {
-          processChoice()
+          fullSwipeChoice.value = true
+          // processChoice()
+        } else {
+          fullSwipeChoice.value = false
         }
       }
     })
@@ -96,11 +125,11 @@ export default defineComponent({
     //   }
     // })
 
-    watch(fullSwipeChoice, (n, o) => {
-      if (n === true) {
-        widthCalc.value = viewportWidth.value
-      }
-    })
+    // watch(fullSwipeChoice, (n, o) => {
+    //   if (n === true) {
+    //     widthCalc.value = viewportWidth.value
+    //   }
+    // })
 
     watch(initIsSwiping, (n, o) => {
       if (n === true) {
@@ -118,7 +147,6 @@ export default defineComponent({
     // })
 
     function processTouchEnd() {
-      console.log('processTouchEnd')
       initIsSwiping.value = false
       if (!fullSwipeChoice.value && widthCalc.value) {
         confirmChoice.value = true
@@ -141,7 +169,8 @@ export default defineComponent({
     function processChoice() {
       initIsSwiping.value = false
       widthCalc.value = viewportWidth.value
-      fullSwipeChoice.value = true
+      // fullSwipeChoice.value = true
+      closeItem.value = true
     }
 
     return {
@@ -157,6 +186,7 @@ export default defineComponent({
       processTouchStart,
       widthCalc,
       processChoice,
+      closeItem,
     }
   },
 })
