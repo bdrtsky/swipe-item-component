@@ -139,6 +139,7 @@ export default defineComponent({
     }
 
     function processChoice() {
+      navigator.vibrate(200)
       initIsSwiping.value = false
       widthCalc.value = viewportWidth.value
       fullSwipeChoice.value = true
