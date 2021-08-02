@@ -2,13 +2,11 @@
   <div
     class="relative overflow-hidden transition-all duration-500 h-12"
     :class="[isSwiping ? 'select-none' : '', closeItem && 'h-0 ']"
-    @touchstart="processTouchStart"
-    @touchend="processTouchEnd"
   >
     <div
       class="absolute top-0 left-0 w-full h-full bg-green-500"
       :class="[
-        initDirection === 'RIGHT' ? 'z-0' : '-z-1',
+        chosenDirection === 'RIGHT' ? 'z-0' : '-z-1',
         fullSwipeChoice && 'text-white',
       ]"
     >
@@ -23,7 +21,7 @@
     <div
       class="absolute top-0 left-0 w-full h-full bg-red-500 flex justify-end"
       :class="[
-        initDirection === 'LEFT' ? 'z-0' : '-z-1',
+        chosenDirection === 'LEFT' ? 'z-0' : '-z-1',
         fullSwipeChoice && 'text-white',
       ]"
     >
@@ -48,10 +46,10 @@
         truncate
       "
       :class="[
-        !initIsSwiping && 'transition-all duration-500',
-        initDirection === 'RIGHT'
+        !isHorizontalSwiping && 'transition-all duration-500',
+        chosenDirection === 'RIGHT'
           ? 'ml-auto'
-          : initDirection === 'LEFT'
+          : chosenDirection === 'LEFT'
           ? 'mr-auto'
           : '',
       ]"
@@ -61,7 +59,7 @@
     >
       <div class="px-4">
         <slot></slot>
-        <span>{{ direction }} :: {{ initIsSwiping }} </span>
+        <span>{{ chosenDirection }} :: {{ direction }} </span>
       </div>
     </div>
   </div>
@@ -74,8 +72,8 @@ import { useSwipe, useWindowSize } from '@vueuse/core'
 export default defineComponent({
   setup(props, context) {
     const el = ref(null)
-    const initDirection = ref(null)
-    const initIsSwiping = ref(false)
+    const chosenDirection = ref('NONE')
+    const isHorizontalSwiping = ref(false)
     const fullSwipeChoice = ref(false)
     const closeItem = ref(false)
     const confirmChoice = ref(false)
@@ -86,91 +84,83 @@ export default defineComponent({
     const { direction, lengthX, isSwiping } = useSwipe(el, {
       threshold: 1,
       onSwipeStart(e) {
-        confirmChoice.value = false
+        console.log('onSwipeStart')
+        // confirmChoice.value = false
       },
       onSwipeEnd(e) {
+        console.log('onSwipeEnd')
+        // confirmChoice.value = false
         if (fullSwipeChoice.value === true) {
           processChoice()
-        } else if (initDirection.value === 'LEFT') {
+        } else if (chosenDirection.value === 'LEFT') {
           context.refs['right-button'].focus()
-        } else if (initDirection.value === 'RIGHT') {
+        } else if (chosenDirection.value === 'RIGHT') {
           context.refs['left-button'].focus()
         }
-        // fullSwipeChoice.value = true
+
+        isHorizontalSwiping.value = false
+        if (!fullSwipeChoice.value && widthCalc.value) {
+          if (!confirmChoice.value) {
+            confirmChoice.value = true
+          } else {
+            confirmChoice.value = false
+          }
+          widthCalc.value = buttonWidth
+        }
+        resetBodyLock()
       },
     })
 
     watch(lengthX, (n, o) => {
       if (
-        initIsSwiping.value === true ||
+        isHorizontalSwiping.value === true ||
         direction.value === 'LEFT' ||
         direction.value === 'RIGHT'
       ) {
-        initIsSwiping.value = true
+        isHorizontalSwiping.value = true
         const sign = Math.sign(n)
-        initDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : null
+        chosenDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : 'NONE'
         widthCalc.value = Math.abs(lengthX.value)
         if (Math.abs(lengthX.value) >= viewportWidth.value / 2) {
           fullSwipeChoice.value = true
-          // processChoice()
         } else {
           fullSwipeChoice.value = false
         }
       }
     })
 
-    // watch(isSwiping, (n, o) => {
-    //   if (n === false) {
-    //     initIsSwiping.value = false // ???
-    //   }
-    // })
-
-    // watch(fullSwipeChoice, (n, o) => {
-    //   if (n === true) {
-    //     widthCalc.value = viewportWidth.value
-    //   }
-    // })
-
-    watch(initIsSwiping, (n, o) => {
+    watch(isHorizontalSwiping, (n, o) => {
       if (n === true) {
-        const scrollBarGap =
-          window.innerWidth - document.documentElement.clientWidth
-        document.body.style.overflow = 'hidden'
-        document.body.style.paddingRight = `${scrollBarGap}px`
+        bodyLock()
       }
     })
 
-    // watch(widthCalc, (n, o) => {
-    //   if (n !== buttonWidth && !confirmChoice.value) {
-    //     initIsSwiping.value = true
-    //   }
-    // })
-
-    function processTouchEnd() {
-      initIsSwiping.value = false
-      if (!fullSwipeChoice.value && widthCalc.value) {
-        confirmChoice.value = true
-        widthCalc.value = buttonWidth
+    watch(confirmChoice, (n, o) => {
+      if (n === false) {
+        resetConfirmChoice()
       }
-      document.body.style.overflow = null
-      document.body.style.paddingRight = null
-    }
-
-    function processTouchStart() {
-      // setTimeout(() => {
-      //   console.log('processTouchStart', widthCalc.value)
-      // }, 500)
-      // const scrollBarGap =
-      //   window.innerWidth - document.documentElement.clientWidth
-      // document.body.style.overflow = 'hidden'
-      // document.body.style.paddingRight = `${scrollBarGap}px`
-    }
+    })
 
     function processChoice() {
-      initIsSwiping.value = false
+      isHorizontalSwiping.value = false
       widthCalc.value = viewportWidth.value
-      // fullSwipeChoice.value = true
       closeItem.value = true
+    }
+
+    function resetConfirmChoice() {
+      widthCalc.value = 0
+    }
+
+    function bodyLock() {
+      const scrollBarGap =
+        window.innerWidth - document.documentElement.clientWidth
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = `${scrollBarGap}px`
+    }
+
+    function resetBodyLock() {
+      document.body.style.overflow = null
+      document.body.style.paddingRight = null
     }
 
     return {
@@ -178,12 +168,10 @@ export default defineComponent({
       direction,
       lengthX,
       isSwiping,
-      initDirection,
-      initIsSwiping,
+      chosenDirection,
+      isHorizontalSwiping,
       fullSwipeChoice,
       confirmChoice,
-      processTouchEnd,
-      processTouchStart,
       widthCalc,
       processChoice,
       closeItem,
