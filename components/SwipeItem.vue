@@ -13,7 +13,7 @@
       <button
         ref="left-button"
         class="h-12 w-12 select-none"
-        @click="processChoice"
+        @click="processIrreversibleChoice"
       >
         ✓
       </button>
@@ -28,7 +28,7 @@
       <button
         ref="right-button"
         class="h-12 w-12 select-none"
-        @click="processChoice"
+        @click="processIrreversibleChoice"
       >
         ✘
       </button>
@@ -59,7 +59,7 @@
     >
       <div class="px-4">
         <slot></slot>
-        <span>{{ chosenDirection }} :: {{ direction }} </span>
+        <span>{{ confirmChoice }} </span>
       </div>
     </div>
   </div>
@@ -71,6 +71,17 @@ import { useSwipe, useWindowSize } from '@vueuse/core'
 
 export default defineComponent({
   setup(props, context) {
+    const mockControlsData = ref({
+      LEFT: {
+        reversible: true,
+        state: false,
+      },
+      RIGHT: {
+        reversible: false,
+        state: false,
+      },
+    })
+
     const el = ref(null)
     const chosenDirection = ref('NONE')
     const isHorizontalSwiping = ref(false)
@@ -91,7 +102,7 @@ export default defineComponent({
         console.log('onSwipeEnd')
         // confirmChoice.value = false
         if (fullSwipeChoice.value === true) {
-          processChoice()
+          processIrreversibleChoice()
         } else if (chosenDirection.value === 'LEFT') {
           context.refs['right-button'].focus()
         } else if (chosenDirection.value === 'RIGHT') {
@@ -99,6 +110,7 @@ export default defineComponent({
         }
 
         isHorizontalSwiping.value = false
+
         if (!fullSwipeChoice.value && widthCalc.value) {
           if (!confirmChoice.value) {
             confirmChoice.value = true
@@ -115,7 +127,8 @@ export default defineComponent({
       if (
         isHorizontalSwiping.value === true ||
         direction.value === 'LEFT' ||
-        direction.value === 'RIGHT'
+        direction.value === 'RIGHT' ||
+        direction.value === 'NONE'
       ) {
         isHorizontalSwiping.value = true
         const sign = Math.sign(n)
@@ -125,6 +138,11 @@ export default defineComponent({
           fullSwipeChoice.value = true
         } else {
           fullSwipeChoice.value = false
+        }
+
+        // disable confirmation button
+        if (chosenDirection.value === 'NONE') {
+          confirmChoice.value = false
         }
       }
     })
@@ -141,7 +159,7 @@ export default defineComponent({
       }
     })
 
-    function processChoice() {
+    function processIrreversibleChoice() {
       isHorizontalSwiping.value = false
       widthCalc.value = viewportWidth.value
       closeItem.value = true
@@ -173,7 +191,7 @@ export default defineComponent({
       fullSwipeChoice,
       confirmChoice,
       widthCalc,
-      processChoice,
+      processIrreversibleChoice,
       closeItem,
     }
   },
