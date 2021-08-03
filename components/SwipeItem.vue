@@ -7,28 +7,28 @@
       class="absolute top-0 left-0 w-full h-full bg-green-500"
       :class="[
         chosenDirection === 'RIGHT' ? 'z-0' : '-z-1',
-        fullSwipeChoice && 'text-white',
+        fullSwipeChoiceMade && 'text-white',
       ]"
     >
       <button
-        ref="left-button"
+        ref="right-direction-button"
         class="h-12 w-12 select-none"
-        @click="processIrreversibleChoice"
+        @click="processChoice"
       >
-        ✓
+        {{ mockControlsData.RIGHT.state ? '✘' : '✓' }}
       </button>
     </div>
     <div
       class="absolute top-0 left-0 w-full h-full bg-red-500 flex justify-end"
       :class="[
         chosenDirection === 'LEFT' ? 'z-0' : '-z-1',
-        fullSwipeChoice && 'text-white',
+        fullSwipeChoiceMade && 'text-white',
       ]"
     >
       <button
-        ref="right-button"
+        ref="left-direction-button"
         class="h-12 w-12 select-none"
-        @click="processIrreversibleChoice"
+        @click="processChoice"
       >
         ✘
       </button>
@@ -59,7 +59,7 @@
     >
       <div class="px-4">
         <slot></slot>
-        <span>{{ confirmChoice }} </span>
+        <span> </span>
       </div>
     </div>
   </div>
@@ -73,11 +73,11 @@ export default defineComponent({
   setup(props, context) {
     const mockControlsData = ref({
       LEFT: {
-        reversible: true,
+        reversible: false,
         state: false,
       },
       RIGHT: {
-        reversible: false,
+        reversible: true,
         state: false,
       },
     })
@@ -85,7 +85,7 @@ export default defineComponent({
     const el = ref(null)
     const chosenDirection = ref('NONE')
     const isHorizontalSwiping = ref(false)
-    const fullSwipeChoice = ref(false)
+    const fullSwipeChoiceMade = ref(false)
     const closeItem = ref(false)
     const confirmChoice = ref(false)
     const widthCalc = ref(0)
@@ -101,17 +101,17 @@ export default defineComponent({
       onSwipeEnd(e) {
         console.log('onSwipeEnd')
         // confirmChoice.value = false
-        if (fullSwipeChoice.value === true) {
-          processIrreversibleChoice()
+        if (fullSwipeChoiceMade.value === true) {
+          processChoice()
         } else if (chosenDirection.value === 'LEFT') {
-          context.refs['right-button'].focus()
+          context.refs['left-direction-button'].focus()
         } else if (chosenDirection.value === 'RIGHT') {
-          context.refs['left-button'].focus()
+          context.refs['right-direction-button'].focus()
         }
 
         isHorizontalSwiping.value = false
 
-        if (!fullSwipeChoice.value && widthCalc.value) {
+        if (!fullSwipeChoiceMade.value && widthCalc.value) {
           if (!confirmChoice.value) {
             confirmChoice.value = true
           } else {
@@ -134,10 +134,12 @@ export default defineComponent({
         const sign = Math.sign(n)
         chosenDirection.value = sign > 0 ? 'LEFT' : sign < 0 ? 'RIGHT' : 'NONE'
         widthCalc.value = Math.abs(lengthX.value)
+
+        // detect full swipe
         if (Math.abs(lengthX.value) >= viewportWidth.value / 2) {
-          fullSwipeChoice.value = true
+          fullSwipeChoiceMade.value = true
         } else {
-          fullSwipeChoice.value = false
+          fullSwipeChoiceMade.value = false
         }
 
         // disable confirmation button
@@ -165,6 +167,23 @@ export default defineComponent({
       closeItem.value = true
     }
 
+    function processReversibleChoice() {
+      isHorizontalSwiping.value = false
+      widthCalc.value = 0
+      mockControlsData.value[chosenDirection.value.toUpperCase()].state =
+        !mockControlsData.value[chosenDirection.value.toUpperCase()].state
+    }
+
+    function processChoice() {
+      if (
+        mockControlsData.value[chosenDirection.value.toUpperCase()].reversible
+      ) {
+        processReversibleChoice()
+      } else {
+        processIrreversibleChoice()
+      }
+    }
+
     function resetConfirmChoice() {
       widthCalc.value = 0
     }
@@ -188,11 +207,13 @@ export default defineComponent({
       isSwiping,
       chosenDirection,
       isHorizontalSwiping,
-      fullSwipeChoice,
+      fullSwipeChoiceMade,
       confirmChoice,
       widthCalc,
       processIrreversibleChoice,
       closeItem,
+      processChoice,
+      mockControlsData,
     }
   },
 })
